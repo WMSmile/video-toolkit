@@ -1,18 +1,26 @@
-name: Release Video Toolkit
+name: Build and Release Wails3 App
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*' # 当你推送 v1.0.0 等标签时触发
+  workflow_dispatch: # 允许手动触发测试
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
             platform: darwin
-            arch: universal
+            arch: amd64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
           - os: windows-latest
             platform: windows
             arch: amd64
@@ -26,30 +34,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1. 安装系统依赖 (Linux 必须)
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config build-essential
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25' # 确保与你的项目要求一致
+          go-version: '1.22'
 
-      - name: Install Wails v3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.75
-
-      - name: Install Dependencies (Linux only)
-        if: matrix.platform == 'linux'
+      # 2. 安装 Task 和 Wails3 CLI
+      - name: Install Tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+          # 安装 Task
+          go install github.com/go-task/task/v3/cmd/task@latest
+          # 安装 Wails3
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.75
+          # 确保它们都在 PATH 中
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      - name: Build Wails App
+      # 3. 调用 Task 进行编译
+      - name: Build with Task
         run: |
-          # 针对不同平台执行编译
-          wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -package
+          # 假设你的 Taskfile 里定义了类似 build-windows, build-mac 等任务
+          # 或者你有一个通用的 build 任务，可以通过环境变量传参
+          task build
+        env:
+          # 如果你的 Taskfile 依赖这些环境变量来区分平台，请传递进去
+          GOOS: ${{ matrix.platform }}
+          GOARCH: ${{ matrix.arch }}
 
-      - name: Upload Artifacts
+      # 4. 发布产物
+      - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            build/bin/*
+          files: build/bin/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
