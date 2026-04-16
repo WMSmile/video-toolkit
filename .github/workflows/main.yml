@@ -1,0 +1,55 @@
+name: Release Video Toolkit
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin
+            arch: universal
+          - os: windows-latest
+            platform: windows
+            arch: amd64
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25' # 确保与你的项目要求一致
+
+      - name: Install Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails@latest
+
+      - name: Install Dependencies (Linux only)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - name: Build Wails App
+        run: |
+          # 针对不同平台执行编译
+          wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -package
+
+      - name: Upload Artifacts
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/bin/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
