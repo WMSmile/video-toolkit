@@ -1,13 +1,18 @@
-name: Release Video Toolkit
+name: Build and Release Wails3 App
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*' # 当你推送 v1.0.0 等标签时触发
+  workflow_dispatch: # 允许手动触发测试
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -26,35 +31,62 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25' # 确保与你的项目要求一致
-
-      - name: Install Wails v3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.75
-
-      - name: Install Dependencies (Linux only)
-        if: matrix.platform == 'linux'
+      # 1. 环境准备：如果是 Linux，必须先安装 GTK 和 WebKit 4.1 开发库
+      - name: Install Linux Dependencies
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
             pkg-config \
-            build-essential \
-            libasound2-dev
+            build-essential
 
+      # 2. 安装 Go 环境
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      # 3. 安装 Wails3 CLI (注意路径已经改为 cmd/wails3)
+      - name: Install Wails3 CLI
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.75
+          # 将 Go bin 目录添加到系统路径
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      # 4. 验证环境 (调试用)
+      - name: Debug Info
+        run: |
+          go version
+          wails3 version
+
+      # 5. 编译项目
+      # 注意：wails3 build 会根据平台自动处理，-package 会生成安装包
       - name: Build Wails App
         run: |
-          # 针对不同平台执行编译
-          wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -package
+          wails3 build -platform ${{ matrix.platform }}/${{ matrix.arch }} -package -o video-toolkit
 
-      - name: Upload Artifacts
+      # 6. 整理产物 (根据 wails3 默认输出路径调整)
+      - name: Prepare Artifacts
+        shell: bash
+        run: |
+          mkdir -p release-dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv build/bin/*.exe release-dist/ || true
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            # macOS 通常产出 .app 或 .dmg
+            zip -r release-dist/video-toolkit-mac.zip build/bin/*.app
+          else
+            mv build/bin/* release-dist/ || true
+          fi
+
+      # 7. 发布到 GitHub Release
+      - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            build/bin/*
+          files: release-dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
