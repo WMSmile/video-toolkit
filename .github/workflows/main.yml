@@ -32,7 +32,7 @@ jobs:
           go-version: '1.25' # 确保与你的项目要求一致
 
       - name: Install Wails v3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails@latest
+        run: go install github.com/wailsapp/wails/v3/pkg/wails@latest
 
       - name: Install Dependencies (Linux only)
         if: matrix.platform == 'linux'
