@@ -70,19 +70,34 @@ jobs:
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
 
-      - name: Prepare Artifacts for Release
+     # 4. 标准化产物路径 (基于你说的 bin/ 目录)
+      - name: Prepare Release Artifacts
         shell: bash
         run: |
           mkdir -p release-dist
-          # 查找 build/bin 下的所有文件并拷贝到 release-dist
-          # 这样可以兼容 .exe, .app 和 linux 二进制文件
-          find build/bin/ -maxdepth 1 -type f -o -name "*.app" -exec cp -r {} release-dist/ \;
-          
+          # 打印一下 bin 目录内容，方便在 Actions 日志里排查
+          echo "Checking bin directory content:"
+          ls -R bin/
+
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            # macOS: 压缩 bin 目录下的 .app 文件夹
+            # 假设生成的 app 叫 video-toolkit.app
+            cd bin && zip -r ../release-dist/video-toolkit-mac-universal.zip *.app && cd ..
+          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # Windows: 拷贝 bin 目录下的 .exe
+            cp bin/*.exe release-dist/ 2>/dev/null || true
+          else
+            # Linux: 拷贝 bin 目录下的二进制文件
+            # 如果文件名不固定，可以用 cp bin/* release-dist/
+            cp bin/video-toolkit release-dist/video-toolkit-linux 2>/dev/null || cp bin/* release-dist/ || true
+          fi
+
+      # 5. 上传到 Release
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # 修改为匹配 release-dist 目录
+          # 关键：现在指向整理好的 release-dist 文件夹
           files: release-dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
