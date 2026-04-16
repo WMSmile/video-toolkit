@@ -181,7 +181,7 @@ func (w *WindowsRecognizer) Close() {
 	}
 	if w.punc != nil {
 		// 释放标点处理器内存
-		sherpa.DeleteOfflinePunctuation(w.punc)
+		sherpa.DeleteOfflinePunc(w.punc)
 		w.punc = nil
 	}
 }

@@ -181,7 +181,7 @@ func (l *LinuxRecognizer) Close() {
 	}
 	if l.punc != nil {
 		// 释放标点处理器内存
-		sherpa.DeleteOfflinePunctuation(l.punc)
+		sherpa.DeleteOfflinePunc(l.punc)
 		l.punc = nil
 	}
 }

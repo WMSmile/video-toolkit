@@ -56,6 +56,8 @@ github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOl
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
 github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 h1:njuLRcjAuMKr7kI3D85AXWkw6/+v9PwtV6M6o11sWHQ=
 github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1/go.mod h1:alcuEEnZsY1WQsagKhZDsoPCRoOijYqhZvPwLG0kzVs=
+github.com/k2-fsa/sherpa-onnx-go-linux v1.12.38 h1:FL8FqwuFzQUCj7YC0FRwXZpzbEtQUIxsTLaHBXzPRcI=
+github.com/k2-fsa/sherpa-onnx-go-linux v1.12.38/go.mod h1:NXEH2rsBgTdqY59YpPq6CtSBlBAXy/8a9FmpLERU97I=
 github.com/k2-fsa/sherpa-onnx-go-macos v1.12.36 h1:PIMXtHE4YPK7d/JnUdgwGRYpZuDpi0Snn/++7XivsnM=
 github.com/k2-fsa/sherpa-onnx-go-macos v1.12.36/go.mod h1:ZOhUAXC62Unj0ZNfu6zxSFKcW96aXf7P3BsqiUyOBbE=
 github.com/k2-fsa/sherpa-onnx-go-windows v1.12.36 h1:YZL1Ooe8vfZglNkOku1S4yOmmPC+Ipvl0Q9KQgOyMgs=

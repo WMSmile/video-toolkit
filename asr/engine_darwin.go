@@ -221,4 +221,9 @@ func (d *DarwinRecognizer) Close() {
 		sherpa.DeleteOfflineRecognizer(d.recognizer)
 		d.recognizer = nil
 	}
+	if d.punc != nil {
+		// 释放标点处理器内存
+		sherpa.DeleteOfflinePunc(d.punc)
+		d.punc = nil
+	}
 }
