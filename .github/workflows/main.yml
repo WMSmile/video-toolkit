@@ -17,7 +17,10 @@ jobs:
         include:
           - os: macos-latest
             platform: darwin
-            arch: universal
+            arch: amd64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
           - os: windows-latest
             platform: windows
             arch: amd64
