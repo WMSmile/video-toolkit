@@ -31,62 +31,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 环境准备：如果是 Linux，必须先安装 GTK 和 WebKit 4.1 开发库
+      # 1. 安装系统依赖 (Linux 必须)
       - name: Install Linux Dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libwebkit2gtk-4.1-dev \
-            pkg-config \
-            build-essential
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config build-essential
 
-      # 2. 安装 Go 环境
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-          check-latest: true
 
-      # 3. 安装 Wails3 CLI (注意路径已经改为 cmd/wails3)
-      - name: Install Wails3 CLI
+      # 2. 安装 Task 和 Wails3 CLI
+      - name: Install Tools
         run: |
+          # 安装 Task
+          go install github.com/go-task/task/v3/cmd/task@latest
+          # 安装 Wails3
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.75
-          # 将 Go bin 目录添加到系统路径
+          # 确保它们都在 PATH 中
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      # 4. 验证环境 (调试用)
-      - name: Debug Info
+      # 3. 调用 Task 进行编译
+      - name: Build with Task
         run: |
-          go version
-          wails3 version
+          # 假设你的 Taskfile 里定义了类似 build-windows, build-mac 等任务
+          # 或者你有一个通用的 build 任务，可以通过环境变量传参
+          task build
+        env:
+          # 如果你的 Taskfile 依赖这些环境变量来区分平台，请传递进去
+          GOOS: ${{ matrix.platform }}
+          GOARCH: ${{ matrix.arch }}
 
-      # 5. 编译项目
-      # 注意：wails3 build 会根据平台自动处理，-package 会生成安装包
-      - name: Build Wails App
-        run: |
-          wails3 build -platform ${{ matrix.platform }}/${{ matrix.arch }} -package -o video-toolkit
-
-      # 6. 整理产物 (根据 wails3 默认输出路径调整)
-      - name: Prepare Artifacts
-        shell: bash
-        run: |
-          mkdir -p release-dist
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv build/bin/*.exe release-dist/ || true
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            # macOS 通常产出 .app 或 .dmg
-            zip -r release-dist/video-toolkit-mac.zip build/bin/*.app
-          else
-            mv build/bin/* release-dist/ || true
-          fi
-
-      # 7. 发布到 GitHub Release
+      # 4. 发布产物
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: release-dist/*
+          files: build/bin/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
