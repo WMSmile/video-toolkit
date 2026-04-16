@@ -29,6 +29,9 @@ jobs:
             arch: amd64
 
     runs-on: ${{ matrix.os }}
+    # 关键：添加以下权限配置
+    permissions:
+      contents: write  # 允许创建 Release 并上传文件
 
     steps:
       - name: Checkout code
@@ -67,11 +70,19 @@ jobs:
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
 
-      # 4. 发布产物
+      - name: Prepare Artifacts for Release
+        shell: bash
+        run: |
+          mkdir -p release-dist
+          # 查找 build/bin 下的所有文件并拷贝到 release-dist
+          # 这样可以兼容 .exe, .app 和 linux 二进制文件
+          find build/bin/ -maxdepth 1 -type f -o -name "*.app" -exec cp -r {} release-dist/ \;
+          
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: build/bin/*
+          # 修改为匹配 release-dist 目录
+          files: release-dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
