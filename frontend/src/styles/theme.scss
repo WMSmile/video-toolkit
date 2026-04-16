@@ -1,0 +1,31 @@
+:root {
+    --el-color-primary: #007acc;
+    --el-bg-color-page: #ecf5ff;
+    --el-fill-color-blank: #dbeaff;
+    --el-border-color-base: #a0cfff;
+    --el-text-color-primary: #001529;
+}
+
+html.dark {
+    --el-color-primary: #409eff;
+    --el-bg-color-page: #1d1e1f;
+    --el-fill-color-blank: #2d2d2d;
+    --el-border-color-base: #4c4d4f;
+    --el-text-color-primary: #e4e7ed;
+}
+
+html.light {
+    --el-color-primary: #409eff;
+    --el-bg-color-page: #ffffff;
+    --el-fill-color-blank: #f5f7fa;
+    --el-border-color-base: #dcdfe6;
+    --el-text-color-primary: #303133;
+}
+
+html.blue {
+    --el-color-primary: #007acc;
+    --el-bg-color-page: #ecf5ff;
+    --el-fill-color-blank: #dbeaff;
+    --el-border-color-base: #a0cfff;
+    --el-text-color-primary: #001529;
+}

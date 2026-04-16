@@ -1,0 +1,13 @@
+# 通用配置
+debug_mode: false
+
+# ffmpeg 配置（全局变量读取）
+ffmpeg_path: "ffmpeg"
+ffprobe_path: "ffprobe"
+
+
+# 主题模式
+theme: "light"
+primary_color: "#409eff"
+
+
