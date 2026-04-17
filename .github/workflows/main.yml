@@ -84,6 +84,12 @@ jobs:
           GOARCH: ${{ matrix.arch }}
           CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
 
+      # 5. 修复 macOS 动态库路径
+      - name: macOS Library Fix
+        if: matrix.platform == 'darwin'
+        run: |
+          cd bin/video-toolkit.app/Contents/MacOS
+          install_name_tool -change "@rpath/libsherpa-onnx-c-api.dylib" "@executable_path/libsherpa-onnx-c-api.dylib" video-toolkit
       # 5. 准备发布产物
       - name: Prepare Artifacts for Release
         run: |
