@@ -59,19 +59,33 @@ jobs:
           # 确保它们都在 PATH 中
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      # 3. 调用 Task 进行编译
+      # 3. 针对 Windows 准备 CGO 编译器 (仅在 Windows 节点执行)
+      - name: Install MinGW (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+
+      # 4. 构建步骤
       - name: Build with Task
         run: |
-          # 针对 macOS 使用 package 任务生成 .app
-          # 针对其他平台使用普通的 build 任务
           if [ "${{ matrix.platform }}" = "darwin" ]; then
             task package ARCH=${{ matrix.arch }}
           else
             task build ARCH=${{ matrix.arch }}
           fi
         shell: bash
+        env:
+          # 关键点：动态设置 CGO
+          # Windows 必须开启 CGO 来编译 sherpa-onnx
+          # macOS 默认开启 (CGO_ENABLED: 1 在你的 Taskfile.yml 里已经写了)
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.platform }}
+          GOARCH: ${{ matrix.arch }}
+          # 只有 Windows 需要明确指定 CC 为 gcc，Linux 默认就有
+          CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
 
-      # 4. 准备发布产物 (由于 .app 是文件夹，Release 无法直接上传，必须先压缩)
+      # 5. 准备发布产物 (由于 .app 是文件夹，Release 无法直接上传，必须先压缩)
       - name: Prepare Artifacts for Release
         run: |
           cd bin
