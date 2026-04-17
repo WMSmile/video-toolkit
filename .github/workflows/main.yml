@@ -62,42 +62,40 @@ jobs:
       # 3. 调用 Task 进行编译
       - name: Build with Task
         run: |
-          # 假设你的 Taskfile 里定义了类似 build-windows, build-mac 等任务
-          # 或者你有一个通用的 build 任务，可以通过环境变量传参
-          task build
-        env:
-          # 如果你的 Taskfile 依赖这些环境变量来区分平台，请传递进去
-          GOOS: ${{ matrix.platform }}
-          GOARCH: ${{ matrix.arch }}
-
-     # 4. 标准化产物路径 (基于你说的 bin/ 目录)
-      - name: Prepare Release Artifacts
-        shell: bash
-        run: |
-          mkdir -p release-dist
-          # 打印一下 bin 目录内容，方便在 Actions 日志里排查
-          echo "Checking bin directory content:"
-          ls -R bin/
-
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            # macOS: 压缩 bin 目录下的 .app 文件夹
-            # 假设生成的 app 叫 video-toolkit.app
-            cd bin && zip -r ../release-dist/video-toolkit-mac-universal.zip *.app && cd ..
-          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-            # Windows: 拷贝 bin 目录下的 .exe
-            cp bin/*.exe release-dist/ 2>/dev/null || true
+          # 针对 macOS 使用 package 任务生成 .app
+          # 针对其他平台使用普通的 build 任务
+          if [ "${{ matrix.platform }}" = "darwin" ]; then
+            task package ARCH=${{ matrix.arch }}
           else
-            # Linux: 拷贝 bin 目录下的二进制文件
-            # 如果文件名不固定，可以用 cp bin/* release-dist/
-            cp bin/video-toolkit release-dist/video-toolkit-linux 2>/dev/null || cp bin/* release-dist/ || true
+            task build ARCH=${{ matrix.arch }}
           fi
+        shell: bash
 
-      # 5. 上传到 Release
+      # 4. 准备发布产物 (由于 .app 是文件夹，Release 无法直接上传，必须先压缩)
+      - name: Prepare Artifacts for Release
+        run: |
+          cd bin
+          if [ "${{ matrix.platform }}" = "darwin" ]; then
+            # 将 .app 文件夹打包成 zip
+            zip -r "../video-toolkit-mac-${{ matrix.arch }}.zip" "video-toolkit.app"
+          elif [ "${{ matrix.platform }}" = "windows" ]; then
+            # Windows 的二进制通常叫 video-toolkit.exe
+            mv video-toolkit.exe "video-toolkit-windows-${{ matrix.arch }}.exe"
+          else
+            # Linux 等
+            mv video-toolkit "video-toolkit-linux-${{ matrix.arch }}"
+          fi
+        shell: bash
+
+      # 5. 发布产物
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # 关键：现在指向整理好的 release-dist 文件夹
-          files: release-dist/*
+          # 只上传根目录下我们刚刚重命名/压缩好的文件
+          files: |
+            *.zip
+            video-toolkit-windows-*
+            video-toolkit-linux-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
