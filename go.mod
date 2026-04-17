@@ -7,7 +7,7 @@ require (
 	github.com/k2-fsa/sherpa-onnx-go-linux v1.12.38
 	github.com/k2-fsa/sherpa-onnx-go-macos v1.12.36
 	github.com/k2-fsa/sherpa-onnx-go-windows v1.12.36
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.74
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.75
 	gopkg.in/yaml.v3 v3.0.1
 )
 

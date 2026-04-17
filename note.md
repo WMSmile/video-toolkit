@@ -21,5 +21,9 @@ brew install go-task
 
 task package:universal
 
+
+export GOPROXY=https://goproxy.cn,direct
+
+
 ```
 
