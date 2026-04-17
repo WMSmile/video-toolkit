@@ -71,45 +71,50 @@ jobs:
         run: |
           if [ "${{ matrix.platform }}" = "darwin" ]; then
             task package ARCH=${{ matrix.arch }}
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            # Linux 运行 package 任务来生成 AppImage/deb/rpm
+            task package ARCH=${{ matrix.arch }}
           else
             task build ARCH=${{ matrix.arch }}
           fi
         shell: bash
         env:
-          # 关键点：动态设置 CGO
-          # Windows 必须开启 CGO 来编译 sherpa-onnx
-          # macOS 默认开启 (CGO_ENABLED: 1 在你的 Taskfile.yml 里已经写了)
           CGO_ENABLED: 1
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
-          # 只有 Windows 需要明确指定 CC 为 gcc，Linux 默认就有
           CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
 
-      # 5. 准备发布产物 (由于 .app 是文件夹，Release 无法直接上传，必须先压缩)
+      # 5. 准备发布产物
       - name: Prepare Artifacts for Release
         run: |
           cd bin
           if [ "${{ matrix.platform }}" = "darwin" ]; then
-            # 将 .app 文件夹打包成 zip
             zip -r "../video-toolkit-mac-${{ matrix.arch }}.zip" "video-toolkit.app"
           elif [ "${{ matrix.platform }}" = "windows" ]; then
-            # Windows 的二进制通常叫 video-toolkit.exe
-            mv video-toolkit.exe "video-toolkit-windows-${{ matrix.arch }}.exe"
-          else
-            # Linux 等
-            mv video-toolkit "video-toolkit-linux-${{ matrix.arch }}"
+            mv video-toolkit.exe "../video-toolkit-windows-${{ matrix.arch }}.exe"
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            # 为 Linux 的各种安装包重命名，增加架构后缀（例如 .AppImage -> -amd64.AppImage）
+            for f in *.{AppImage,deb,rpm}; do
+              if [ -f "$f" ]; then
+                base="${f%.*}"
+                ext="${f##*.}"
+                mv "$f" "../${base}-${{ matrix.arch }}.${ext}"
+              fi
+            done
           fi
         shell: bash
 
-      # 5. 发布产物
+      # 6. 发布产物
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # 只上传根目录下我们刚刚重命名/压缩好的文件
           files: |
             *.zip
             video-toolkit-windows-*
             video-toolkit-linux-*
+            *.AppImage
+            *.deb
+            *.rpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
