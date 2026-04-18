@@ -99,12 +99,11 @@ jobs:
           elif [ "${{ matrix.platform }}" = "windows" ]; then
             mv video-toolkit.exe "../video-toolkit-windows-${{ matrix.arch }}.exe"
           elif [ "${{ matrix.platform }}" = "linux" ]; then
-            # 为 Linux 的各种安装包重命名，增加架构后缀（例如 .AppImage -> -amd64.AppImage）
+            # 为 Linux 的各种安装包重命名，使用统一的命名格式
             for f in *.{AppImage,deb,rpm}; do
               if [ -f "$f" ]; then
-                base="${f%.*}"
                 ext="${f##*.}"
-                mv "$f" "../${base}-${{ matrix.arch }}.${ext}"
+                mv "$f" "../video-toolkit-linux-${{ matrix.arch }}.${ext}"
               fi
             done
           fi
