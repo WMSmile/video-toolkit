@@ -75,7 +75,7 @@ jobs:
             # Linux 运行 package 任务来生成 AppImage/deb/rpm
             task package ARCH=${{ matrix.arch }}
           else
-            task build ARCH=${{ matrix.arch }}
+            CGO_ENABLED=1 task build ARCH=${{ matrix.arch }}
           fi
         shell: bash
         env:
