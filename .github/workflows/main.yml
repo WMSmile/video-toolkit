@@ -84,30 +84,40 @@ jobs:
           GOARCH: ${{ matrix.arch }}
           CC: ${{ matrix.os == 'windows-latest' && 'gcc' || '' }}
 
-      # 5. 修复 macOS 动态库路径
-      - name: macOS Library Fix
-        if: matrix.platform == 'darwin'
-        run: |
-          cd bin/video-toolkit.app/Contents/MacOS
-          install_name_tool -change "@rpath/libsherpa-onnx-c-api.dylib" "@executable_path/libsherpa-onnx-c-api.dylib" video-toolkit
       # 5. 准备发布产物
-      - name: Prepare Artifacts for Release
+      - name: Package Artifacts
         run: |
           cd bin
           if [ "${{ matrix.platform }}" = "darwin" ]; then
+            # macOS: .app 本身就是文件夹，直接打成 zip 即可（已包含内部库）
             zip -r "../video-toolkit-mac-${{ matrix.arch }}.zip" "video-toolkit.app"
+            
           elif [ "${{ matrix.platform }}" = "windows" ]; then
-            mv video-toolkit.exe "../video-toolkit-windows-${{ matrix.arch }}.exe"
+            # Windows: 必须把 .exe 和 .dll 一起打包，否则无法运行
+            mkdir -p windows-release
+            cp video-toolkit.exe windows-release/
+            cp *.dll windows-release/ 2>/dev/null || true
+            cd windows-release
+            zip -r "../../video-toolkit-windows-${{ matrix.arch }}.zip" .
+            cd ..
+            
           elif [ "${{ matrix.platform }}" = "linux" ]; then
-            # 为 Linux 的各种安装包重命名，使用统一的命名格式
+            # 1. 处理安装包 (AppImage, deb, rpm) - 这些包内部已封装了库
             for f in *.{AppImage,deb,rpm}; do
               if [ -f "$f" ]; then
                 ext="${f##*.}"
                 mv "$f" "../video-toolkit-linux-${{ matrix.arch }}.${ext}"
               fi
             done
+            
+            # 2. 如果你也想提供“绿色版”二进制压缩包
+            if [ -f "video-toolkit" ]; then
+              mkdir -p linux-release
+              cp video-toolkit linux-release/
+              cp *.so linux-release/ 2>/dev/null || true
+              tar -czf "../video-toolkit-linux-${{ matrix.arch }}.tar.gz" -C linux-release .
+            fi
           fi
-        shell: bash
 
       # 6. 发布产物
       - name: Upload Release Assets
