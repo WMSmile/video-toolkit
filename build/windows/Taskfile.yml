@@ -47,6 +47,9 @@ tasks:
         platforms: [windows]
       - cmd: rm -f *.syso
         platforms: [linux, darwin]
+      # 新增：调试输出
+      - echo "--- Checking bin directory contents ---"
+      - dir {{.BIN_DIR}}
     vars:
       BUILD_FLAGS: '{{if eq .DEV "true"}}{{if .EXTRA_TAGS}}-tags {{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui"{{end}}'
     env:
@@ -69,11 +72,23 @@ tasks:
           Build it first: wails3 task setup:docker
     cmds:
       - task: generate:syso
+
+      # 2. 核心操作：将 DLL 拷贝到 bin 目录
+      # 确保 DLL 和生成的 .exe 在同一个目录下，Windows 才能在运行时找到它们
+      - cp "{{.WIN_LIB_SRC}}/sherpa-onnx-c-api.dll" "{{.BIN_DIR}}/"
+      - cp "{{.WIN_LIB_SRC}}/onnxruntime.dll" "{{.BIN_DIR}}/"
+
       - docker run --rm -v "{{.ROOT_DIR}}:/app" {{.GO_CACHE_MOUNT}} {{.REPLACE_MOUNTS}} -e APP_NAME="{{.APP_NAME}}" {{if .EXTRA_TAGS}}-e EXTRA_TAGS="{{.EXTRA_TAGS}}"{{end}} {{.CROSS_IMAGE}} windows {{.DOCKER_ARCH}}
       - docker run --rm -v "{{.ROOT_DIR}}:/app" alpine chown -R $(id -u):$(id -g) /app/bin
       - rm -f *.syso
+      # 新增：调试输出
+      - echo "--- Checking bin directory contents ---"
+      - dir {{.BIN_DIR}}
     vars:
       DOCKER_ARCH: '{{.ARCH | default "amd64"}}'
+      # 1. 定义 Windows 库文件的来源路径 (根据架构选择子目录)
+      WIN_LIB_ARCH: '{{if eq .DOCKER_ARCH "amd64"}}x86_64{{else}}i686{{end}}-pc-windows-gnu'
+      WIN_LIB_SRC: "$(go env GOPATH)/pkg/mod/github.com/k2-fsa/sherpa-onnx-go-windows@v1.12.36/lib/{{.WIN_LIB_ARCH}}"
       # Mount Go module cache for faster builds
       GO_CACHE_MOUNT:
         sh: 'echo "-v ${GOPATH:-$HOME/go}/pkg/mod:/go/pkg/mod"'

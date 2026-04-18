@@ -51,7 +51,16 @@ tasks:
       - task: generate:dotdesktop
     cmds:
       - go build {{.BUILD_FLAGS}} -o {{.OUTPUT}}
+      # 拷贝动态库到二进制文件所在目录
+      - cp "{{.LINUX_LIB_SRC}}/libsherpa-onnx-c-api.so" "{{.BIN_DIR}}/"
+      - cp "{{.LINUX_LIB_SRC}}/libonnxruntime.so" "{{.BIN_DIR}}/"
+      # 新增：调试输出
+      - echo "--- Checking bin directory contents ---"
+      - ls -l {{.BIN_DIR}}
     vars:
+      # 根据架构映射目录名
+      LINUX_LIB_ARCH: '{{if eq .ARCH "amd64"}}x86_64{{else if eq .ARCH "arm64"}}aarch64{{else}}arm{{end}}-unknown-linux-gnu{{if eq .ARCH "arm"}}ebihf{{end}}'
+      LINUX_LIB_SRC: "$(go env GOPATH)/pkg/mod/github.com/k2-fsa/sherpa-onnx-go-linux@v1.12.36/lib/{{.LINUX_LIB_ARCH}}"
       BUILD_FLAGS: '{{if eq .DEV "true"}}{{if .EXTRA_TAGS}}-tags {{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
@@ -79,8 +88,17 @@ tasks:
       - docker run --rm -v "{{.ROOT_DIR}}:/app" alpine chown -R $(id -u):$(id -g) /app/bin
       - mkdir -p {{.BIN_DIR}}
       - mv "bin/{{.APP_NAME}}-linux-{{.DOCKER_ARCH}}" "{{.OUTPUT}}"
+      # 从宿主机（或映射路径）拷贝对应的动态库到 bin 目录
+      - cp "{{.LINUX_LIB_SRC}}/libsherpa-onnx-c-api.so" "{{.BIN_DIR}}/"
+      - cp "{{.LINUX_LIB_SRC}}/libonnxruntime.so" "{{.BIN_DIR}}/"
+      # 新增：调试输出
+      - echo "--- Checking bin directory contents ---"
+      - ls -l {{.BIN_DIR}}
     vars:
       DOCKER_ARCH: '{{.ARCH | default "amd64"}}'
+      # 映射 Docker 环境下的架构路径
+      LINUX_LIB_ARCH: '{{if eq .DOCKER_ARCH "amd64"}}x86_64{{else if eq .DOCKER_ARCH "arm64"}}aarch64{{else}}arm{{end}}-unknown-linux-gnu{{if eq .DOCKER_ARCH "arm"}}ebihf{{end}}'
+      LINUX_LIB_SRC: "$(go env GOPATH)/pkg/mod/github.com/k2-fsa/sherpa-onnx-go-linux@v1.12.36/lib/{{.LINUX_LIB_ARCH}}"
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
       # Mount Go module cache for faster builds
